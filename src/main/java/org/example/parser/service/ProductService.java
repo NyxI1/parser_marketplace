@@ -7,6 +7,7 @@ import org.example.parser.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 import org.example.parser.parser.PriceParserService;
 import org.example.parser.parser.ParsedProduct;
+import java.util.Optional;
 
 import java.util.List;
 
@@ -56,5 +57,17 @@ public class ProductService {
 
     public void deleteProductsByUserId(Long userId) {
         productRepository.deleteByUserId(userId);
+    }
+
+    public boolean deleteProduct(Long productId, Long userId) {
+        Optional<Product> product =
+                productRepository.findByIdAndUserId(productId, userId);
+
+        if (product.isPresent()) {
+            productRepository.delete(product.get());
+            return true;
+        }
+
+        return false;
     }
 }

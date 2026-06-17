@@ -16,6 +16,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import java.util.Set;
+import java.util.HashSet;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.List;
 public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
 
     private final ProductService productService;
+    private final Set<Long> waitingForDelete = new HashSet<>();
 
     @Value("${telegram.bot.token}")
     private String botToken;
@@ -55,18 +58,40 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
         Long chatId = update.getMessage().getChatId();
         String text = update.getMessage().getText();
 
+        if (waitingForDelete.contains(chatId)) {
+            try {
+                Long productId = Long.parseLong(text.trim());
+
+                boolean deleted = productService.deleteProduct(productId, chatId);
+
+                if (deleted) {
+                    send(chatId, "🗑 Товар удалён.");
+                } else {
+                    send(chatId, "❌ Товар не найден.");
+                }
+
+            } catch (Exception e) {
+                send(chatId, "⚠️ Введите только ID товара, например: 15");
+            }
+
+            waitingForDelete.remove(chatId);
+            return;
+        }
+
         if (text.equals("/start")) {
             send(chatId, """
                     Привет! Я бот для отслеживания цен 🛒
                     
-                           Что я умею:
-                           ➕ добавлять товар по ссылке
-                           📋 показывать список товаров
-                           🔍 проверять цены
-                           🗑 очищать список
+                    Что я умею:
+                           
+                    ➕ добавлять товар по ссылке
+                    📋 показывать список товаров
+                    🔍 проверять цены
+                    🧹 очищать список
+                    🗑 удалять товар по ID
                     
-                           Для добавления товара отправь:
-                            /add ссылка | целеваяЦена
+                    Для добавления товара отправь:
+                    /add ссылка | целеваяЦена
             """);
         } else if (text.equals("➕ Добавить товар")) {
             send(chatId, "Отправь товар в формате:\n/add ссылка | целеваяЦена");
@@ -74,12 +99,18 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
             listProducts(chatId);
         } else if (text.equals("🔍 Проверить цены")) {
             checkPrices(chatId);
-        } else if (text.equals("🗑 Очистить список")) {
+        } else if (text.equals("🧹 Очистить список")) {
             productService.deleteProductsByUserId(chatId);
             send(chatId, "Список товаров очищен.");
         } else if (text.startsWith("/add")) {
             addProduct(chatId, text);
-        } else {
+        }  else if (text.equals("🗑 Удалить товар")) {
+            waitingForDelete.add(chatId);
+            send(chatId, "Введите ID товара, который нужно удалить:");
+        } else if (text.startsWith("/delete")) {
+            deleteProduct(chatId, text);
+        }
+        else {
             send(chatId, "Неизвестная команда. Напиши /start");
         }
     }
@@ -152,6 +183,26 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
         }
     }
 
+    private void deleteProduct(Long chatId, String text) {
+        try {
+            String idText = text.replace("/delete", "").trim();
+
+            Long productId = Long.parseLong(idText);
+
+            boolean deleted =
+                    productService.deleteProduct(productId, chatId);
+
+            if (deleted) {
+                send(chatId, "Товар удалён.");
+            } else {
+                send(chatId, "Товар не найден.");
+            }
+
+        } catch (Exception e) {
+            send(chatId, "Формат: /delete id");
+        }
+    }
+
     private ReplyKeyboardMarkup mainKeyboard() {
         KeyboardRow row1 = new KeyboardRow();
         row1.add("➕ Добавить товар");
@@ -161,9 +212,13 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
         row2.add("🔍 Проверить цены");
         row2.add("🗑 Очистить список");
 
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add("🗑 Удалить товар");
+
         List<KeyboardRow> keyboard = new ArrayList<>();
         keyboard.add(row1);
         keyboard.add(row2);
+        keyboard.add(row3);
 
         return ReplyKeyboardMarkup.builder()
                 .keyboard(keyboard)
