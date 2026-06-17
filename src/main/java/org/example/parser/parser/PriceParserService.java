@@ -6,17 +6,26 @@ import org.springframework.stereotype.Service;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Service
 public class PriceParserService {
 
     public ParsedProduct parseProduct(String url) {
+        System.out.println("PARSER START");
+        System.out.println(url);
         try {
             Document document = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36")
                     .referrer("https://www.google.com")
                     .timeout(10000)
                     .get();
+
+            Files.writeString(
+                    Path.of("C:/Users/Никита/Downloads/parser/page.html"),
+                    document.html()
+            );
 
             String html = document.html();
 
@@ -30,31 +39,42 @@ public class PriceParserService {
             return new ParsedProduct(title, price);
 
         } catch (Exception e) {
+            e.printStackTrace();
             return new ParsedProduct("Товар", null);
         }
     }
 
     private Double extractPrice(String html) {
-        Pattern ozonCardPrice = Pattern.compile("\"cardPrice\"\\s*:\\s*\"?(\\d+)");
-        Matcher ozonCardPriceMatcher = ozonCardPrice.matcher(html);
+        String normalized = html
+                .replace("\\\"", "\"")
+                .replace("&quot;", "\"");
 
-        if (ozonCardPriceMatcher.find()) {
-            return Double.parseDouble(ozonCardPriceMatcher.group(1));
+        Pattern priceValuePattern = Pattern.compile("\"priceValue\"\\s*:\\s*\"(\\d+)\"");
+        Matcher priceValueMatcher = priceValuePattern.matcher(normalized);
+
+        if (priceValueMatcher.find()) {
+            return Double.parseDouble(priceValueMatcher.group(1));
         }
 
-        Pattern pricePattern = Pattern.compile("\"price\"\\s*:\\s*\"?(\\d+)");
-        Matcher priceMatcher = pricePattern.matcher(html);
+        Pattern actualPricePattern = Pattern.compile("\"actualPrice\".*?\"intPart\"\\s*:\\s*(\\d+)");
+        Matcher actualPriceMatcher = actualPricePattern.matcher(normalized);
 
-        if (priceMatcher.find()) {
-            return Double.parseDouble(priceMatcher.group(1));
+        if (actualPriceMatcher.find()) {
+            return Double.parseDouble(actualPriceMatcher.group(1));
         }
 
-        Pattern rublePattern = Pattern.compile("(\\d{2,3}\\s?\\d{3})\\s*₽");
-        Matcher rubleMatcher = rublePattern.matcher(html);
+        Pattern valuePattern = Pattern.compile("\"price\"\\s*:\\s*\\{\\s*\"value\"\\s*:\\s*(\\d+)");
+        Matcher valueMatcher = valuePattern.matcher(normalized);
 
-        if (rubleMatcher.find()) {
-            String price = rubleMatcher.group(1).replace(" ", "");
-            return Double.parseDouble(price);
+        if (valueMatcher.find()) {
+            return Double.parseDouble(valueMatcher.group(1));
+        }
+
+        Pattern simplePricePattern = Pattern.compile("\"price\"\\s*:\\s*\"?(\\d+)");
+        Matcher simplePriceMatcher = simplePricePattern.matcher(normalized);
+
+        if (simplePriceMatcher.find()) {
+            return Double.parseDouble(simplePriceMatcher.group(1));
         }
 
         return null;

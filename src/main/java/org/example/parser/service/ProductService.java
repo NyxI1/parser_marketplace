@@ -24,7 +24,7 @@ public class ProductService {
         Double currentPrice = parsed.getPrice();
 
         if (currentPrice == null) {
-            currentPrice = product.getLastPrice();
+            throw new RuntimeException("Не удалось получить цену товара");
         }
 
         Product db = Product.builder()
@@ -33,6 +33,7 @@ public class ProductService {
                 .userId(product.getUserId())
                 .targetPrice(product.getTargetPrice())
                 .lastPrice(currentPrice)
+                .notified(false)
                 .build();
 
         return productRepository.save(db);

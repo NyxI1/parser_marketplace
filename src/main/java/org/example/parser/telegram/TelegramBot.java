@@ -57,7 +57,7 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
                     Привет! Я бот для отслеживания цен.
 
                     Команды:
-                    /add название | ссылка | целеваяЦена | текущаяЦена
+                    /add ссылка | целеваяЦена
                     /list
                     /clear
                     /check
@@ -81,8 +81,8 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
             String data = text.replaceFirst("/add", "").trim();
             String[] parts = data.split("\\|");
 
-            if (parts.length < 3) {
-                send(chatId, "Формат: /add ссылка | целеваяЦена | текущаяЦена");
+            if (parts.length < 2) {
+                send(chatId, "Формат: /add ссылка | целеваяЦена");
                 return;
             }
 
@@ -90,7 +90,6 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
             dto.setUrl(parts[0].trim());
             dto.setUserId(chatId);
             dto.setTargetPrice(Double.parseDouble(parts[1].trim()));
-            dto.setLastPrice(Double.parseDouble(parts[2].trim()));
 
             Product saved = productService.createProduct(dto);
 

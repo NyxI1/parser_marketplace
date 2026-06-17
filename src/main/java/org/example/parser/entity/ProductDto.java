@@ -7,5 +7,4 @@ public class ProductDto {
     private String url;
     private Long userId;
     private Double targetPrice;
-    private Double lastPrice;
 }
