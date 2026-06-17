@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: parser_postgres
+    environment:
+      POSTGRES_DB: nikita_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5433:5432"
+
+  app:
+    build: .
+    container_name: parser_app
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/nikita_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: 1234
