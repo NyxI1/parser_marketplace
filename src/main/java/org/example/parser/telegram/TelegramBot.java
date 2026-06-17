@@ -14,7 +14,10 @@ import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateC
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -54,23 +57,28 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
 
         if (text.equals("/start")) {
             send(chatId, """
-                    Привет! Я бот для отслеживания цен.
-
-                    Команды:
-                    /add ссылка | целеваяЦена
-                    /list
-                    /clear
-                    /check
-                    """);
-        } else if (text.startsWith("/add")) {
-            addProduct(chatId, text);
-        } else if (text.equals("/list")) {
+                    Привет! Я бот для отслеживания цен 🛒
+                    
+                           Что я умею:
+                           ➕ добавлять товар по ссылке
+                           📋 показывать список товаров
+                           🔍 проверять цены
+                           🗑 очищать список
+                    
+                           Для добавления товара отправь:
+                            /add ссылка | целеваяЦена
+            """);
+        } else if (text.equals("➕ Добавить товар")) {
+            send(chatId, "Отправь товар в формате:\n/add ссылка | целеваяЦена");
+        } else if (text.equals("📋 Мои товары")) {
             listProducts(chatId);
-        } else if (text.equals("/clear")) {
+        } else if (text.equals("🔍 Проверить цены")) {
+            checkPrices(chatId);
+        } else if (text.equals("🗑 Очистить список")) {
             productService.deleteAllProducts();
             send(chatId, "Список товаров очищен.");
-        } else if (text.equals("/check")) {
-            checkPrices(chatId);
+        } else if (text.startsWith("/add")) {
+            addProduct(chatId, text);
         } else {
             send(chatId, "Неизвестная команда. Напиши /start");
         }
@@ -115,11 +123,10 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
         StringBuilder sb = new StringBuilder("Товары для отслеживания:\n\n");
 
         for (Product product : products) {
-            sb.append("ID: ").append(product.getId()).append("\n")
-                    .append("Название: ").append(product.getTitle()).append("\n")
-                    .append("Ссылка: ").append(product.getUrl()).append("\n")
-                    .append("Целевая цена: ").append(product.getTargetPrice()).append("\n")
-                    .append("Текущая цена: ").append(product.getLastPrice()).append("\n\n");
+            sb.append("📦 ").append(product.getTitle()).append("\n")
+                    .append("💰 Текущая: ").append(product.getLastPrice()).append(" ₽\n")
+                    .append("🎯 Целевая: ").append(product.getTargetPrice()).append(" ₽\n")
+                    .append("🆔 ID: ").append(product.getId()).append("\n\n");
         }
 
         send(chatId, sb.toString());
@@ -145,11 +152,31 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
         }
     }
 
+    private ReplyKeyboardMarkup mainKeyboard() {
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("➕ Добавить товар");
+        row1.add("📋 Мои товары");
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("🔍 Проверить цены");
+        row2.add("🗑 Очистить список");
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+        keyboard.add(row1);
+        keyboard.add(row2);
+
+        return ReplyKeyboardMarkup.builder()
+                .keyboard(keyboard)
+                .resizeKeyboard(true)
+                .build();
+    }
+
     public void send(Long chatId, String text) {
         try {
             SendMessage message = SendMessage.builder()
                     .chatId(chatId)
                     .text(text)
+                    .replyMarkup(mainKeyboard())
                     .build();
 
             telegramClient.execute(message);
