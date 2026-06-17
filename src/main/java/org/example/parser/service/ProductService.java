@@ -49,4 +49,12 @@ public class ProductService {
     public Product save(Product product) {
         return productRepository.save(product);
     }
+
+    public List<Product> getProductsByUserId(Long userId) {
+        return productRepository.findByUserId(userId);
+    }
+
+    public void deleteProductsByUserId(Long userId) {
+        productRepository.deleteByUserId(userId);
+    }
 }

@@ -75,7 +75,7 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
         } else if (text.equals("🔍 Проверить цены")) {
             checkPrices(chatId);
         } else if (text.equals("🗑 Очистить список")) {
-            productService.deleteAllProducts();
+            productService.deleteProductsByUserId(chatId);
             send(chatId, "Список товаров очищен.");
         } else if (text.startsWith("/add")) {
             addProduct(chatId, text);
@@ -113,7 +113,7 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
     }
 
     private void listProducts(Long chatId) {
-        List<Product> products = productService.getAllProducts();
+        List<Product> products = productService.getProductsByUserId(chatId);
 
         if (products.isEmpty()) {
             send(chatId, "Список товаров пуст.");
