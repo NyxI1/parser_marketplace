@@ -36,16 +36,11 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
     private TelegramBotsLongPollingApplication botsApplication;
 
     @PostConstruct
-    public void init() {
-        try {
-            telegramClient = new OkHttpTelegramClient(botToken);
-            botsApplication = new TelegramBotsLongPollingApplication();
-            botsApplication.registerBot(botToken, this);
-            System.out.println("Telegram bot started");
-        } catch (Exception e) {
-            System.out.println("Telegram bot start failed: " + e.getMessage());
-            e.printStackTrace();
-        }
+    public void init() throws Exception {
+        telegramClient = new OkHttpTelegramClient(botToken);
+        botsApplication = new TelegramBotsLongPollingApplication();
+        botsApplication.registerBot(botToken, this);
+        System.out.println("✅ Telegram bot registered");
     }
 
     @PreDestroy
