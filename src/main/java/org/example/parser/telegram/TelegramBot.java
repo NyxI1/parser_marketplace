@@ -81,21 +81,16 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
 
         if (text.equals("/start")) {
             send(chatId, """
-                    Привет! Я бот для отслеживания цен 🛒
-                    
-                    Что я умею:
-                           
-                    ➕ добавлять товар по ссылке
-                    📋 показывать список товаров
-                    🔍 проверять цены
-                    🧹 очищать список
-                    🗑 удалять товар по ID
-                    
-                    Для добавления товара отправь:
-                    /add ссылка | целеваяЦена
-            """);
+🛒 Бот отслеживания цен
+
+Добро пожаловать!
+
+📌 Используйте кнопки ниже для управления товарами.
+""");
         } else if (text.equals("➕ Добавить товар")) {
-            send(chatId, "Отправь товар в формате:\n/add ссылка | целеваяЦена");
+            send(chatId, "📦 Отправьте ссылку и целевую цену:\n\n" +
+                    "Пример:\n" +
+                    "https://market.yandex.ru/... | 50000");
         } else if (text.equals("📋 Мои товары")) {
             listProducts(chatId);
         } else if (text.equals("🔍 Проверить цены")) {
@@ -105,24 +100,47 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
             send(chatId, "Список товаров очищен.");
         } else if (text.startsWith("/add")) {
             addProduct(chatId, text);
-        }  else if (text.equals("🗑 Удалить товар")) {
+        } else if (text.contains("market.yandex.ru")) {
+            addProduct(chatId, text);
+        } else if (text.equals("🗑 Удалить товар")) {
             waitingForDelete.add(chatId);
             send(chatId, "Введите ID товара, который нужно удалить:");
         } else if (text.startsWith("/delete")) {
             deleteProduct(chatId, text);
-        }
-        else {
+        } else if (text.equals("ℹ️ О проекте")) {
+            send(chatId,
+                    """
+                    📊 Price Tracker Bot
+                    
+                    Telegram-бот для отслеживания цен на товары из Яндекс Маркета.
+                    
+                    ✅ Добавление товаров
+                    ✅ Отслеживание цен
+                    ✅ Уведомления о скидках
+                    ✅ PostgreSQL
+                    
+                    🎞️ Презентация:
+                    https://www.figma.com/make/oFKIN1SAJsALBSocfnmZsM/%D0%9F%D1%80%D0%B5%D0%B7%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F-parser_marketplace?code-node-id=1-8&p=f&fullscreen=1
+                    
+                    👨‍💻 Автор:
+                    Петров Никита
+                    Группа 9/1-РПО-25/1
+                    """);
+        } else {
             send(chatId, "Неизвестная команда. Напиши /start");
         }
     }
 
     private void addProduct(Long chatId, String text) {
         try {
-            String data = text.replaceFirst("/add", "").trim();
+            String data = text.trim();
             String[] parts = data.split("\\|");
 
             if (parts.length < 2) {
-                send(chatId, "Формат: /add ссылка | целеваяЦена");
+                send(chatId,
+                        "📦 Отправьте ссылку и целевую цену:\n\n" +
+                                "Пример:\n" +
+                                "https://market.yandex.ru/... | 50000");
                 return;
             }
 
@@ -133,17 +151,20 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
 
             Product saved = productService.createProduct(dto);
 
-            send(chatId, "Товар добавлен:\n" +
-                    saved.getTitle() + "\n" +
-                    "Текущая цена: " + saved.getLastPrice() + "\n" +
-                    "Целевая цена: " + saved.getTargetPrice());
+            send(chatId,
+                    "🛒 Товар добавлен в отслеживание\n\n" +
+                            "📦 Название:\n" +
+                            saved.getTitle() + "\n\n" +
+                            "💰 Текущая цена: " + saved.getLastPrice() + " ₽\n" +
+                            "🎯 Желаемая цена: " + saved.getTargetPrice() + " ₽\n\n" +
+                            "🔔 Вы получите уведомление при достижении целевой цены.");
 
 
         } catch (Exception e) {
-            send(chatId, "Ошибка при добавлении товара. Формат: /add ссылка | целеваяЦена");
+            e.printStackTrace();
+            send(chatId, "Ошибка: " + e.getMessage());
         }
     }
-
     private void listProducts(Long chatId) {
         List<Product> products = productService.getProductsByUserId(chatId);
 
@@ -165,17 +186,19 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
     }
 
     private void checkPrices(Long chatId) {
-        List<Product> products = productService.getAllProducts();
+        List<Product> products =  productService.getProductsByUserId(chatId);
 
         boolean found = false;
 
         for (Product product : products) {
             if (product.getLastPrice() <= product.getTargetPrice()) {
                 found = true;
-                send(chatId, "Цена снизилась!\n" +
-                        product.getTitle() + "\n" +
-                        "Текущая цена: " + product.getLastPrice() + "\n" +
-                        "Целевая цена: " + product.getTargetPrice());
+                send(chatId,
+                        "🎯 Целевая цена достигнута!\n" +
+                                product.getTitle() + "\n" +
+                                "💰 Текущая цена: " + product.getLastPrice() + "\n" +
+                                "🎯 Целевая цена: " + product.getTargetPrice()
+                );
             }
         }
 
@@ -211,10 +234,13 @@ public class TelegramBot implements LongPollingSingleThreadUpdateConsumer {
 
         KeyboardRow row2 = new KeyboardRow();
         row2.add("🔍 Проверить цены");
-        row2.add("🗑 Очистить список");
+        row2.add("🧹 Очистить список");
 
         KeyboardRow row3 = new KeyboardRow();
         row3.add("🗑 Удалить товар");
+
+        KeyboardRow row4 = new KeyboardRow();
+        row3.add("ℹ️ О проекте");
 
         List<KeyboardRow> keyboard = new ArrayList<>();
         keyboard.add(row1);

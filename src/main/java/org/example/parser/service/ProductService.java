@@ -8,11 +8,13 @@ import org.springframework.stereotype.Service;
 import org.example.parser.parser.PriceParserService;
 import org.example.parser.parser.ParsedProduct;
 import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ProductService {
 
     private final ProductRepository productRepository;
