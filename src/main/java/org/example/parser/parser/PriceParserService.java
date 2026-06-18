@@ -35,11 +35,9 @@ public class PriceParserService {
 
             String title = extractTitle(document.html(), document.title());
 
-            System.out.println("HTML LENGTH = " + html.length());
 
             Double price = extractPrice(html);
 
-            System.out.println("PRICE = " + price);
 
             if (title == null || title.isBlank()) {
                 title = "Товар";
@@ -48,10 +46,7 @@ public class PriceParserService {
             return new ParsedProduct(title, price);
 
         } catch (Exception e) {
-            System.out.println("ERROR TYPE = " + e.getClass().getName());
-            System.out.println("ERROR MESSAGE = " + e.getMessage());
-            e.printStackTrace();
-
+            System.err.println("Ошибка парсинга: " + e.getMessage());
             return new ParsedProduct("Товар", null);
         }
     }
